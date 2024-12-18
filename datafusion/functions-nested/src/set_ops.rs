@@ -383,7 +383,7 @@ fn generic_set_lists<OffsetSize: OffsetSizeTrait>(
     // Handle empty array at rhs case
     // array_union(arr, []) -> arr;
     // array_intersect(arr, []) -> [];
-    if r.value_length(0).is_zero() {
+    if r.value_length(0).is_zero() && r.len() == 1 {
         if set_op == SetOp::Union {
             return Ok(Arc::new(l.clone()) as ArrayRef);
         } else {
