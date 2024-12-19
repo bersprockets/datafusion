@@ -941,3 +941,14 @@ where min_height * width1 = (
 )
 ----
 4 7 4 28
+
+## Issue: https://github.com/apache/datafusion/issues/xxxx
+query I
+select unnest(c1) as x
+from values ([1, 2, 3]), (null) as t1(c1)
+full outer join values ([1, 2, 3]) as t2(c1)
+using (c1)
+----
+1
+2
+3

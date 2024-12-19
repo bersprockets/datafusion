@@ -250,7 +250,6 @@ impl<S: ContextProvider> SqlToRel<'_, S> {
                 return plan_err!("unnest() requires exactly one argument");
             }
             let expr = exprs.swap_remove(0);
-            Self::check_unnest_arg(&expr, schema)?;
             return Ok(Expr::Unnest(Unnest::new(expr)));
         }
 
