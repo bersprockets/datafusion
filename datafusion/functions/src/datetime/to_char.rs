@@ -285,15 +285,15 @@ fn _to_char_array(args: &[ColumnarValue]) -> Result<ColumnarValue> {
     }
 
     match args[0] {
-        ColumnarValue::Array(_) => Ok(ColumnarValue::Array(Arc::new(StringArray::from(
-            results,
-        )) as ArrayRef)),
-        ColumnarValue::Scalar(_) => match results.first().unwrap() {
+        ColumnarValue::Scalar(_) if format_array.len() == 1 => match results.first().unwrap() {
             Some(value) => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(Some(
                 value.to_string(),
             )))),
             None => Ok(ColumnarValue::Scalar(ScalarValue::Utf8(None))),
         },
+        _ => Ok(ColumnarValue::Array(Arc::new(StringArray::from(
+            results,
+        )) as ArrayRef))
     }
 }
 

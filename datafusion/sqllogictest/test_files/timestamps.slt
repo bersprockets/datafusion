@@ -2863,6 +2863,24 @@ select to_char('2020-01-01 00:10:20.123'::timestamp at time zone 'America/New_Yo
 statement ok
 drop table formats;
 
+## issue xxxx
+## literal date, multiple formats
+query T
+select to_char(date'2023-03-01',col2)
+from values ('%d-%m-%Y'), (null), ('%m-%d-%Y')
+as data(col2);
+----
+01-03-2023
+NULL
+03-01-2023
+
+query T
+select to_char(date'2023-03-01',col2)
+from values ('%d-%m-%Y')
+as data(col2);
+----
+01-03-2023
+
 ##########
 ## to_unixtime tests
 ##########
