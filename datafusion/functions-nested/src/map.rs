@@ -102,7 +102,7 @@ fn make_map_batch(args: &[ColumnarValue]) -> Result<ColumnarValue> {
         let array_args = ColumnarValue::values_to_arrays(args)?;
         let keys = &array_args[0];
         let values = &array_args[1];
-        make_map_batch_internal(keys, values, can_evaluate_to_const, args[0].data_type())
+        make_map_batch_internal(keys, values, args[0].data_type())
     }
 }
 
@@ -177,60 +177,17 @@ fn make_map_scalar_internal(
 fn make_map_batch_internal(
     keys: &ArrayRef,
     values: &ArrayRef,
-    can_evaluate_to_const: bool,
     data_type: DataType,
 ) -> Result<ColumnarValue> {
     if keys.len() != values.len() {
         return exec_err!("map requires key and value lists to have the same length");
     }
 
-    if !can_evaluate_to_const {
-        return if let DataType::LargeList(..) = data_type {
-            make_map_array_internal::<i64>(keys, values)
-        } else {
-            make_map_array_internal::<i32>(keys, values)
-        }
-    };
-
-    // get back the scalar values
-    
-    let key_field = Arc::new(Field::new("key", keys.data_type().clone(), false));
-    let value_field = Arc::new(Field::new("value", values.data_type().clone(), true));
-    let mut entry_struct_buffer: VecDeque<(Arc<Field>, ArrayRef)> = VecDeque::new();
-    let mut entry_offsets_buffer = VecDeque::new();
-    entry_offsets_buffer.push_back(0);
-
-    entry_struct_buffer.push_back((Arc::clone(&key_field), Arc::clone(&keys)));
-    entry_struct_buffer.push_back((Arc::clone(&value_field), Arc::clone(&values)));
-    entry_offsets_buffer.push_back(keys.len() as u32);
-
-    let entry_struct: Vec<(Arc<Field>, ArrayRef)> = entry_struct_buffer.into();
-    let entry_struct = StructArray::from(entry_struct);
-
-    let map_data_type = DataType::Map(
-        Arc::new(Field::new(
-            "entries",
-            entry_struct.data_type().clone(),
-            false,
-        )),
-        false,
-    );
-
-    let entry_offsets: Vec<u32> = entry_offsets_buffer.into();
-    let entry_offsets_buffer = Buffer::from(entry_offsets.to_byte_slice());
-
-    let map_data = ArrayData::builder(map_data_type)
-        .len(entry_offsets.len() - 1)
-        .add_buffer(entry_offsets_buffer)
-        .add_child_data(entry_struct.to_data())
-        .build()?;
-    let map_array = Arc::new(MapArray::from(map_data));
-
-    Ok(if can_evaluate_to_const {
-        ColumnarValue::Scalar(ScalarValue::try_from_array(map_array.as_ref(), 0)?)
+    if let DataType::LargeList(..) = data_type {
+        make_map_array_internal::<i64>(keys, values)
     } else {
-        ColumnarValue::Array(map_array)
-    })
+        make_map_array_internal::<i32>(keys, values)
+    }
 }
 
 #[user_doc(
