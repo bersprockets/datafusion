@@ -24,7 +24,7 @@ use arrow_array::{Array, ArrayRef, MapArray, OffsetSizeTrait, StructArray};
 use arrow_buffer::{Buffer, ToByteSlice};
 use arrow_schema::{DataType, Field, SchemaBuilder};
 
-use datafusion_common::utils::{fixed_size_list_to_arrays, list_to_arrays};
+use datafusion_common::utils::{fixed_size_list_to_arrays, list_to_arrays, coerced_fixed_size_list_to_list};
 use datafusion_common::{exec_err, HashSet, Result, ScalarValue};
 use datafusion_expr::expr::ScalarFunction;
 use datafusion_expr::{
@@ -248,7 +248,7 @@ impl Default for MapFunc {
 impl MapFunc {
     pub fn new() -> Self {
         Self {
-            signature: Signature::variadic_any(Volatility::Immutable),
+            signature: Signature::user_defined(Volatility::Immutable),
         }
     }
 }
@@ -265,7 +265,22 @@ impl ScalarUDFImpl for MapFunc {
     fn signature(&self) -> &Signature {
         &self.signature
     }
-
+ 
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        use arrow_schema::DataType::{FixedSizeList, LargeList, List};
+        if arg_types.len() != 2 {
+            return Ok(Vec::from(arg_types));
+        }
+        let mut result = Vec::new();
+        for arg_type in arg_types {
+            match arg_type {
+                List(_) | LargeList(_) | FixedSizeList(_, _) => result.push(coerced_fixed_size_list_to_list(arg_type)),
+                _ => result.push(arg_type.clone()),
+            }
+        }
+        Ok(result)
+    }
+ 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         if arg_types.len() != 2 {
             return exec_err!(
