@@ -382,6 +382,19 @@ SELECT MAP(arrow_cast(make_array('POST', 'HEAD', 'PATCH'), 'LargeList(Utf8)'), a
 {POST: 41, HEAD: 33, PATCH: 30}
 {POST: 41, HEAD: 33, PATCH: 30}
 
+# https://github.com/apache/datafusion/issues/yyyy
+query ?
+SELECT MAP(c1, c2) from values
+(arrow_cast(make_array('POST', 'HEAD', 'PATCH'), 'FixedSizeList(3, Utf8)'), arrow_cast(make_array(41, 33, 30), 'FixedSizeList(3, Int64)')) as data(c1, c2);
+----
+{POST: 41, HEAD: 33, PATCH: 30}
+
+# https://github.com/apache/datafusion/issues/zzzz
+query error
+select map(c1, c2) from values
+([1, 2, 3], [4, 5, 6, 7]),
+([8, 9, 10, 11], [12, 13, 14])
+as data(c1, c2);
 
 query ?
 VALUES (MAP(['a'], [1])), (MAP(['b'], [2])), (MAP(['c', 'a'], [3, 1]))
@@ -540,6 +553,12 @@ SELECT MAP { 'a': 1, 2: 3 };
 # SELECT MAKE_MAP(1, null, 2, 33, 3, null)[2];
 # ----
 # 33
+
+# https://github.com/apache/datafusion/issues/xxxx
+query ?
+SELECT make_map(77, c1) from values (1) as t(c1);
+----
+{77: 1}
 
 ## cardinality
 
