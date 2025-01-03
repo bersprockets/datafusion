@@ -97,7 +97,7 @@ fn make_map_batch(args: &[ColumnarValue]) -> Result<ColumnarValue> {
         }
     }
 
-    return if can_evaluate_to_const {
+    if can_evaluate_to_const {
         let values = get_first_array_ref(&args[1])?;
         make_map_scalar_internal(keys, values)
     } else {
@@ -105,7 +105,7 @@ fn make_map_batch(args: &[ColumnarValue]) -> Result<ColumnarValue> {
         let keys = &array_args[0];
         let values = &array_args[1];
         make_map_batch_internal(keys, values, args[0].data_type())
-    };
+    }
 }
 
 fn check_unique_keys(array: &dyn Array) -> Result<()> {
