@@ -24,7 +24,9 @@ use arrow_array::{Array, ArrayRef, MapArray, OffsetSizeTrait, StructArray};
 use arrow_buffer::{Buffer, ToByteSlice};
 use arrow_schema::{DataType, Field, SchemaBuilder};
 
-use datafusion_common::utils::{fixed_size_list_to_arrays, list_to_arrays, coerced_fixed_size_list_to_list};
+use datafusion_common::utils::{
+    coerced_fixed_size_list_to_list, fixed_size_list_to_arrays, list_to_arrays,
+};
 use datafusion_common::{exec_err, HashSet, Result, ScalarValue};
 use datafusion_expr::expr::ScalarFunction;
 use datafusion_expr::{
@@ -103,7 +105,7 @@ fn make_map_batch(args: &[ColumnarValue]) -> Result<ColumnarValue> {
         let keys = &array_args[0];
         let values = &array_args[1];
         make_map_batch_internal(keys, values, args[0].data_type())
-    }
+    };
 }
 
 fn check_unique_keys(array: &dyn Array) -> Result<()> {
@@ -131,10 +133,7 @@ fn get_first_array_ref(columnar_value: &ColumnarValue) -> Result<ArrayRef> {
     }
 }
 
-fn make_map_scalar_internal(
-    keys: ArrayRef,
-    values: ArrayRef
-) -> Result<ColumnarValue> {
+fn make_map_scalar_internal(keys: ArrayRef, values: ArrayRef) -> Result<ColumnarValue> {
     if keys.len() != values.len() {
         return exec_err!("map requires key and value lists to have the same length");
     }
@@ -171,7 +170,10 @@ fn make_map_scalar_internal(
         .build()?;
     let map_array = Arc::new(MapArray::from(map_data));
 
-    Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(map_array.as_ref(), 0)?))
+    Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+        map_array.as_ref(),
+        0,
+    )?))
 }
 
 fn make_map_batch_internal(
@@ -265,7 +267,7 @@ impl ScalarUDFImpl for MapFunc {
     fn signature(&self) -> &Signature {
         &self.signature
     }
- 
+
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
         use arrow_schema::DataType::{FixedSizeList, LargeList, List};
         if arg_types.len() != 2 {
@@ -274,13 +276,15 @@ impl ScalarUDFImpl for MapFunc {
         let mut result = Vec::new();
         for arg_type in arg_types {
             match arg_type {
-                List(_) | LargeList(_) | FixedSizeList(_, _) => result.push(coerced_fixed_size_list_to_list(arg_type)),
+                List(_) | LargeList(_) | FixedSizeList(_, _) => {
+                    result.push(coerced_fixed_size_list_to_list(arg_type))
+                }
                 _ => result.push(arg_type.clone()),
             }
         }
         Ok(result)
     }
- 
+
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         if arg_types.len() != 2 {
             return exec_err!(
